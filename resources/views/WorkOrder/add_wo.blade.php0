@@ -1,0 +1,172 @@
+@extends('layouts.app')
+
+@section('styles')
+<style>
+    .errMsg td {
+        white-space: nowrap;
+    }
+</style>
+@endsection
+
+@section('content')
+    <!-- Content Header (Page header) -->
+    <div class="content-header">
+        <div class="container-fluid">
+            <h1 class="m-0">{{ __('Jadwal Produksi') }}</h1>
+        </div><!-- /.container-fluid -->
+    </div>
+    <!-- /.content-header -->
+    <!-- Main content -->
+    <div class="content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col">
+                    <script>
+                        var jumlah=0;
+                        function yyy() {
+                            var tmp = '';
+                            for (i=1; i<=jumlah; i++) {
+                                tmp += document.getElementById('sku' + i).value + ',' + document.getElementById('weight' + i).value + ';';
+                            }
+                            document.getElementById('temp').value = tmp;
+                        }
+                    </script>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card">
+                        <div class="card-body text-capitalize">
+                            <form action="{{ route('wo.create') }}" method="POST" onsubmit="yyy()">
+                                @csrf                                    
+                                <div class="row justify-content-center">
+                                    <div class="col-xs-8 col-sm-8 col-md-5">
+                                        <div class="form-group">
+                                            <input type="hidden" id="temp" name="temp" value="{{old('temp')}}">
+                                            {{-- <input type="button" value="aty" onclick="yyy()"> --}}
+                                            <label><strong>Site</strong></label>
+                                            <select id="sites" name="sites" class="form-control" required !onchange="document.getElementById('site').value=this.value;">
+                                                <option value="">-- Please Select --</option>
+                                                @foreach($sites AS $site)
+                                                    <option value="{{ $site->site }},{{ $site->line_count }}">{{ $site->site_name }}</option>
+                                                @endforeach
+                                            </select>
+                                            <input type='hidden' id='site' name='site' value="{{ old('sites') }}" />
+                                            <input type='hidden' id='skus' name='skus' value="{{ old('skus') }}" />
+                                        </div>
+                                    </div>
+                                    <div class="col-xs-8 col-sm-8 col-md-3">
+                                        <div class="form-group">
+                                            <label for="date"><strong>date</strong></label>
+                                            <div class='input-group date' id='datetimepicker3' required>
+                                                <input type='date' name='date' value="{{ old('date') }}" class="form-control" />
+                                             </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-xs-8 col-sm-8 col-md-8">
+                                        <table id="table" class="table list" style="display:none">
+                                            <thead>
+                                                <tr>
+                                                <th>No.</th>
+                                                <th>SKU</th>
+                                                <th>Weight (In Kg)</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody id="konten"></tbody>
+                                        </table>
+                                        <div class="mt-3 mb-3 float-right">
+                                            <button type="submit" class="btn btn-sm btn-primary text-capitalize">submit</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <!-- /.card-body -->
+                    </div>
+                </div>
+            </div>
+            <!-- /.row -->
+        </div><!-- /.container-fluid -->
+    </div>
+    <!-- /.end content -->
+@endsection
+
+@section('scripts')
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+<script>
+$(document).ready(function(){
+    setTimeout(function () {
+        if(document.getElementById("site").value!='') {
+            var obj=document.getElementById("sites");
+            obj.value=document.getElementById("site").value;
+            obj.click();
+        }
+    }, 100);
+
+    $('#sites').change(function(){
+        // var value = document.getElementById("sites").value;
+        $('#konten').empty();
+        $(".list").hide();
+        var obj = document.getElementById("sites").value.split(",");
+        var jumlah = obj[1];
+        for ($i = 1; $i <= jumlah; $i++) {
+            form = '<tr><td>' + $i;
+            form += '</td>';
+            form += '<td>';
+            form += '<select  class="form-control text-capitalize" id="sku' + $i + '" type="text" name="sku[]" onchange="yyy()">';
+            form += '<option value="">-- please select  --</option>';
+            form += '@foreach($skus AS $sku)';
+            form += '<option value="{{ $sku->sku }}">{{ $sku->sku . " - " .  $sku->sku_name }}</option>';
+            form += '@endforeach';
+            form += '</select></td>';
+            form += '<td width=128><input style="text-align:right;" id="weight' + $i + '" type="text" name="weight[]" class="form-control" placeholder="0" onchange="yyy()">';
+            form += '</td></tr>';
+            $('#konten').append(form);
+            $(".list").show();
+        }
+        // $.ajax({
+        //     type: "GET",
+        //     url: "{{url('/wo/showAjax')}}",
+        //     data: "id=" + value,
+        //     dataType: "json",
+        //     cache: false,
+        //     success: function(response) {
+                
+        //         $('#konten').empty();
+        //         $(".list").hide();
+        //         $.each(response, function(i, item) {
+        //             jumlah = item.line_count;
+        //             for ($i = 1; $i <= jumlah; $i++) {
+        //                 form = '<tr><td>' + $i;
+        //                 form += '</td>';
+        //                 form += '<td>';
+        //                 form += '<select  class="form-control text-capitalize" id="sku' + $i + '" type="text" name="sku[]" onchange="yyy()">';
+        //                 form += '<option value="">-- please select  --</option>';
+        //                 form += '@foreach($skus AS $sku)';
+        //                 form += '<option value="{{ $sku->sku }}">{{ $sku->sku . " - " .  $sku->sku_name }}</option>';
+        //                 form += '@endforeach';
+        //                 form += '</select></td>';
+        //                 form += '<td width=128><input style="text-align:right;" id="weight' + $i + '" type="text" name="weight[]" class="form-control" placeholder="0" onchange="yyy()">';
+        //                 form += '</td></tr>';
+        //                 $(".list").show();
+        //                 $('#konten').append(form);
+        //             }
+        //             // console.log(item.line_count);
+        //         });
+
+        //         if (document.getElementById('temp').value != '') {
+        //             if (document.getElementById("sites").value == document.getElementById("site").value) {
+        //                 var obj1 = document.getElementById('temp').value.split(';');
+        //                 for (var i=0; i<obj1.length; i++) {
+        //                     var obj2 = obj1[i].split(',');
+        //                     document.getElementById('sku' + (i+1)).value = obj2[0];
+        //                     document.getElementById('weight' + (i+1)).value = obj2[1];
+        //                 }
+        //             }
+        //         }
+        //     }
+        // });
+    });
+});  
+</script>
+@endsection

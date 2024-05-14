@@ -1,0 +1,183 @@
+@extends('layouts.app')
+@section('content')
+<style>
+    .errMsg td {
+        white-space: nowrap;
+    }
+</style>
+<!-- Content Header (Page header) -->
+<div class="content-header">
+    <div class="container-fluid">
+        <h1 class="m-0">{{ __('Jadwal Produksi') }}</h1>
+    </div><!-- /.container-fluid -->
+</div>
+<!-- /.content-header -->
+<!-- Main content -->
+<div class="content">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="card">
+                    <script>
+                        var jumlah=0;
+                        function sku_weight() {
+                            var tmp = '';
+                            for (i=1; i<=jumlah; i++) {
+                                tmp += document.getElementById('sku' + i).value + ',' + document.getElementById('weight' + i).value + ';';
+                            }
+                            document.getElementById('temp').value = tmp;
+                        }
+                        function nextDate() {
+                            var tmp = document.getElementById('tgl').value.split("-");
+                            var day = new Date(new Date(tmp[0], tmp[1]-1, tmp[2])-(24*60*60*1000));
+                            document.getElementById('tgl').value = (day.getFullYear()+'-0'+(day.getMonth()+1)+'-0'+day.getDate());
+                            //document.getElementById('tgl').value = 
+                        }
+                    </script>
+                    <div class="card-body text-capitalize">
+                        <form id="theform" action="{{ route('wo.create') }}" method="POST" onsubmit="sku_weight()">
+                            @csrf
+                            <div class="row justify-content-center">
+                                <div class="col-xs-10 col-sm-7 col-md-7">
+                                    <div class="form-group">
+                                        <input type="hidden" id="wono" name="wono" value="{{old('wono')}}">
+                                        <input type="hidden" id="temp" name="temp" value="{{old('temp')}}">
+                                        {{-- <input type="button" value="aty" onclick="sku_weight()"> --}}
+                                        <label><strong>Site</strong></label>
+                                        <select id="sites" name="sites" class="form-control" required onchange="callAjax();">
+                                            <option value="" selected>-- Please Select --</option>
+                                            @foreach($sites AS $site)
+                                            <option value="{{ $site->site }},{{ $site->line_count }}">{{
+                                                $site->site_name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <input type='hidden' id='site' name='site' value="{{ old('sites') }}" />
+                                        <input type='hidden' id='skus' name='skus' value="{{ old('skus') }}" />
+                                    </div>
+                                </div>
+                                <div class="col-xs-10 col-sm-3 col-md-3">
+                                    <div class="form-group">
+                                        <label for="date"><strong>date</strong></label>
+                                        <div class='input-group date' required>
+                                            <input type=button style="width:40px;" class="btn btn-primary" onclick="prevDate();" value="<">
+                                            <input type='date' name='date' id='tgl' onchange="callAjax();" @if(old('date') == '') value="{{ $today }}" @endif class="form-control" />
+                                            <input type=button style="width:40px;" class="btn btn-primary" onclick="nextDate();" value=">">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-xs-10 col-sm-10 col-md-10">
+                                    <br><div class="tbl">
+                                        <table id="table" class="table list" style="display:none">
+                                            <thead>
+                                                <tr>
+                                                    <th>No.</th>
+                                                    <th>SKU</th>
+                                                    <th>Weight (In Kg)</th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="konten"></tbody>
+                                        </table>
+                                        <div id="tombol" align="right">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <!-- /.card-body -->
+                </div>
+            </div>
+        </div>
+        <!-- /.row -->
+    </div><!-- /.container-fluid -->
+</div>
+<!-- /.end content -->
+@endsection
+
+@section('scripts')
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+<script>
+    function callAjax() {
+        //alert('callAjax');
+        var obj = document.getElementById("sites").value.split(",");
+        document.getElementById("site").value = obj;
+        var value = obj[0];
+        var tgl = document.getElementById("tgl").value;
+        
+        //var btn = '';
+        //console.log(document.getElementById("tgl").value);
+        $.ajax({
+            type: "GET",
+            url: "{{url('/wo/showAjax')}}",
+            data: {
+                id:value,
+                tgl:tgl,
+            },
+            dataType: "json",
+            cache: false,
+            success: function(response) {
+                $('#konten').empty();
+                $('#tombol').empty();
+                $(".list").show();
+                if (response.length > 0) {
+                    $.each(response, function(i, item) {
+                        $("#wono").val(item.wo_no);
+                        form = '<tr><td>' + item.unit + '</td>';
+                        form += '<td>' + item.sku + ' - ' + item.sku_name + '<input type="hidden" id="sku' + item.sku + '" value="' + item.sku + '" name="sku[]"></td>';
+                        form += '<td>' + item.weight_assigned + '<input type="hidden" id="weight' + item.weight_assigned + '" value="' + item.weight_assigned + '" name="weight[]"></td>';
+                        form += '<td>' + item.status_name + '</td></tr>';
+                        $('#konten').append(form);
+                    });
+                    $('#theform').attr('action', '{{ route("wo.delete") }}');
+                    //btnx = '<a align="center" style="text-align:right" class="btn btn-primary btn-round" href="{{ url("wo/delete?wo_no=") }}' + response[0]['wo_no'] +'" onclick="return confirm(\'Apakah yakin akan menghapus WO?\')">Drop WO</a>';
+                    btn = '<button type="submit" class="btn btn-sm btn-primary text-capitalize submit_button">Drop WOX</button>';
+                    $('#tombol').append(btn);
+                } else {
+                    $("#wono").val("");
+                    jumlah = obj[1];
+                    for ($i = 1; $i <= jumlah; $i++) {
+                        form = '<tr><td>' + $i + '</td>';
+                        form += '<td><select class="form-control text-capitalize" id="sku' + $i + '" type="text" name="sku[]" onchange="sku_weight()">';
+                        form += '<option value="">-- please select  --</option>';
+                        form += '@foreach($skus AS $sku)';
+                        form += '<option value="{{ $sku->sku }}">{{ $sku->sku . " - " .  $sku->sku_name }}</option>';
+                        form += '@endforeach';
+                        form += '</select></td>';
+                        form += '<td><input id="weight' + $i + '" type="text" name="weight[]" class="form-control" placeholder="Weight" onchange="sku_weight()"></td>';
+                        form += '<td>Baru</td></tr>';
+                        $('#konten').append(form);  
+                    }
+                    $('#theform').attr('action', '{{ route("wo.create") }}');
+                    btn = '<button type="submit" class="btn btn-sm btn-primary text-capitalize submit_button">submit</button>';
+                    $('#tombol').append(btn);  
+                }
+            }
+        }); 
+                
+        if (document.getElementById('temp').value != '') {
+            if (document.getElementById("sites").value == document.getElementById("site").value) {
+                var obj1 = document.getElementById('temp').value.split(';');
+                for (var i=0; i<obj1.length; i++) {
+                    var obj2 = obj1[i].split(',');
+                    document.getElementById('sku' + (i+1)).value = obj2[0];
+                    document.getElementById('weight' + (i+1)).value = obj2[1];
+                }
+            }
+        }
+    }
+    $(document).ready(function(){
+        setTimeout(function () {
+            var obj=document.getElementById("sites");
+            if(document.getElementById("site").value!='') {
+                obj.value=document.getElementById("site").value;
+                // callAjax(); //obj.click();
+            } else {
+                obj.selectedIndex = 1;
+            }
+            callAjax();
+        }, 100);
+        // $('#tgl').change(callAjax());
+    });
+</script>
+@endsection

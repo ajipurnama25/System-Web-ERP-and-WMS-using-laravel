@@ -1,0 +1,206 @@
+@extends('layouts.app')
+@section('content')
+<style>
+    .errMsg td {
+        white-space: nowrap;
+    }
+</style>
+<!-- Content Header (Page header) -->
+<div class="content-header">
+    <div class="container-fluid">
+        <h1 class="m-0">{{ __('Jadwal Produksi') }}</h1>
+    </div><!-- /.container-fluid -->
+</div>
+<!-- /.content-header -->
+<!-- Main content -->
+<div class="content">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="card">
+                    <script>
+                        var jumlah=0;
+                        function backup_data() {
+                            var tmp = '';
+                            for (i=1; i<=jumlah; i++) {
+                                if (document.getElementById('sku' + i)!=null) {
+                                    tmp += document.getElementById('sku' + i).value + ',' + document.getElementById('weight' + i).value + ';';
+                                } else {
+                                    tmp += ',;';
+                                }
+                            }
+                            document.getElementById('temp').value = tmp;
+                        }
+                        function restore_data() {
+                            if (document.getElementById('temp').value != '') {
+                                if (document.getElementById("sites").value == document.getElementById("site").value) {
+                                    var obj1 = document.getElementById('temp').value.split(';');
+                                    document.getElementById('temp').value = '';
+                                    for (var i=1; i<=obj1.length; i++) {
+                                        var obj2 = obj1[i-1].split(',');
+                                        if (document.getElementById('sku' + i)!=null) {
+                                            document.getElementById('sku' + i).value = obj2[0];
+                                            document.getElementById('weight' + i).value = obj2[1];
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        function prevDate() {
+                            var tmp = document.getElementById('tgl').value.split("-");
+                            var day = new Date(new Date(tmp[0], tmp[1]-1, tmp[2])-(24*60*60*1000));
+                            document.getElementById('tgl').value = (day.getFullYear()+'-0'+(day.getMonth()+1)+'-'+day.getDate());
+                            callAjax(); 
+                        }
+                        function nextDate() {
+                            var tmp = document.getElementById('tgl').value.split("-");
+                            var day = new Date(new Date(tmp[0], tmp[1]-1, tmp[2])-(-24*60*60*1000));
+                            document.getElementById('tgl').value = (day.getFullYear()+'-0'+(day.getMonth()+1)+'-'+day.getDate());
+                            callAjax(); 
+                        }
+                        function formCreate() {
+                            $('#theform').attr('action', '{{ route("wo.create") }}');
+                        }
+                    </script>
+                    <div class="card-body text-capitalize">
+                        <form id="theform" action="{{ route('wo.delete') }}" method="POST" onsubmit="backup_data()">
+                            @csrf
+                            <div class="row justify-content-center">
+                                <div class="col-xs-10 col-sm-6 col-md-6">
+                                    <div class="form-group">
+                                        <input type='hidden' id='site' name='site' @if(old('sites') == '') value="{{ $site }}" @else value="{{ old('sites') }}" @endif />
+                                        <input type="hidden" id="wono" name="wono" value="{{ old('wono') }}">
+                                        <input type="hidden" id="unit" name="unit">
+                                        <input type="hidden" id="temp" name="temp" value="{{ old('temp') }}">
+                                        <label><strong>Site</strong></label>
+                                        <select id="sites" name="sites" class="form-control" required onchange="callAjax();">
+                                            <option value="" selected>-- Please Select --</option>
+                                            @foreach($sites AS $tmp)
+                                            <option value="{{ $tmp->site }}">{{ $tmp->site_name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-xs-10 col-sm-4 col-md-4">
+                                    <div class="form-group">
+                                        <label for="date"><strong>date</strong></label>
+                                        <div class='input-group date' required>
+                                            <input type=button style="width:40px;" class="btn btn-primary" onclick="prevDate();" value="<">
+                                            <input type='date' name='date' id='tgl' onchange="callAjax();" @if(old('date') == '') value="{{ $date }}" @else value="{{ old('date') }}" @endif class="form-control" />
+                                            <input type=button style="width:40px;" class="btn btn-primary" onclick="nextDate();" value=">">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-xs-10 col-sm-10 col-md-10">
+                                    <br><div class="tbl">
+                                        <table id="table" class="table list" style="display:none">
+                                            <thead>
+                                                <tr>
+                                                    <th>No.</th>
+                                                    <th>SKU</th>
+                                                    <th>Berat (Kg)</th>
+                                                    <th>Status</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="konten"></tbody>
+                                        </table>
+                                        <div id="tombol" align="right">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <!-- /.card-body -->
+                </div>
+            </div>
+        </div>
+        <!-- /.row -->
+    </div><!-- /.container-fluid -->
+</div>
+<!-- /.end content -->
+@endsection
+
+@section('scripts')
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+<script>
+    function callAjax() {
+        $('#whole_page_loader').show();
+        var obj = document.getElementById("sites").value;//.split(",");
+        var value = obj;//[0];
+        document.getElementById("site").value = obj;
+        var tgl = document.getElementById("tgl").value;
+        //document.getElementById('temp').value = '';
+        //var btn = '';
+        //console.log(document.getElementById("tgl").value);
+        $.ajax({
+            type: "GET",
+            url: "{{url('/wo/showAjax')}}",
+            data: {
+                id:value,
+                tgl:tgl,
+            },
+            dataType: "json",
+            cache: false,
+            success: function(response) {
+                $('#konten').empty();
+                $('#tombol').empty();
+                $(".list").show();
+                if (response.length > 0) {
+                    kosong = 0;
+                    jumlah = response.length;
+                    $.each(response, function(i, item) {
+                        $("#wono").val(item.wo_no);
+                        form = '<tr><td>' + item.unit + '</td>';
+                        if (!item.status_name) {
+                            form += '<td><input type="hidden" id="idx' + item.unit + '" name="idx[]" value="' + item.unit + '">';
+                            form += '<select class="form-control text-capitalize" id="sku' + item.unit + '" type="text" name="sku[]" !onchange="backup_data()">';
+                            form += '<option value="">-- Belum Ada Jadwal Produksi --</option>';
+                            @foreach($skus AS $sku)
+                            if (item.sku_group == {{ $sku->sku_group }}) {
+                                form += '<option value="{{ $sku->sku }}">{{ $sku->sku . " - " .  $sku->sku_name }}</option>';
+                            }
+                            @endforeach
+                            form += '</select></td>';
+                            form += '<td><input style="width:100px;text-align:right;" id="weight' + item.unit + '" type="text" name="weight[]" class="form-control" placeholder="Weight" !onchange="backup_data()"></td>';
+                            form += '<td>Baru</td>';
+                            form += '<td></td></tr>';
+                            kosong++;
+                        } else {
+                            form += '<td>' + item.sku + ' - ' + item.sku_name + '</td>';
+                            form += '<td align=right>' + item.weight + '</td>';
+                            form += '<td>' + item.status_name + '</td>';
+                            form += '<td><button type="submit" class="btn btn-sm btn-primary text-capitalize submit_button" onclick="document.getElementById(\'unit\').value=' + item.unit + ';">Batal</button></td></tr>';
+                            // form += '<td><input type="button" class="btn btn-sm btn-primary text-capitalize" value="Batalkan"></td></tr>';
+                        }
+                        $('#konten').append(form);
+                    });
+                    if (kosong>0) {
+                        // $('#theform').attr('action', '{{ route("wo.create") }}');
+                        btn = '<button type="submit" class="btn btn-primary text-capitalize submit_button"  onclick="formCreate()">Simpan Perubahan</button>';
+                        $('#tombol').append(btn);
+                    // } else {
+                    //     $('#theform').attr('action', '{{ route("wo.delete") }}');
+                    }
+                    setTimeout(function () {
+                        restore_data();
+                    }, 100);
+                }
+                $('#whole_page_loader').hide();
+            }
+        }); 
+    }
+    $(document).ready(function(){
+        setTimeout(function () {
+            var obj=document.getElementById("sites");
+            if(document.getElementById("site").value!='') {
+                obj.value=document.getElementById("site").value;
+            } else {
+                obj.selectedIndex = 1;
+            }
+            callAjax();
+        }, 100);
+    });
+</script>
+@endsection
